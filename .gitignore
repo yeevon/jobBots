@@ -1,0 +1,16 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Chrome debug profile (used by Selenium)
+C:/Temp/ChromeDebug/
+
+# Data output files
+*.csv
+*.xlsx
+
+# JetBrains IDE config
+.idea/
