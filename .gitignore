@@ -8,9 +8,8 @@ __pycache__/
 # Chrome debug profile (used by Selenium)
 C:/Temp/ChromeDebug/
 
-# Data output files
-*.csv
-*.xlsx
+# Ignore the entire data folder (CSV, Excel files, etc.)
+data/
 
 # JetBrains IDE config
 .idea/
