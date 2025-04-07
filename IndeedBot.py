@@ -14,11 +14,6 @@ def build_df (df):
     if len(verify_human) > 0:
         input("Press enter once humanity is verified")
 
-    # Data Clean up
-    df['Link'] = "https://www.indeed.com" + df['Link']
-
-    df = df.drop_duplicates(subset='Link', keep='first', ignore_index=True)
-
     rows = []
 
     # Loop to extract job data and navigate through pages
@@ -89,20 +84,28 @@ for url in job_urls:
     df = pd.concat([df, build_df(df)], ignore_index=True)
 
 # Data clean up
+
 df['Link'] = "https://www.indeed.com" + df['Link']
 df = df.drop_duplicates(subset='Link', keep="first", ignore_index=True)
+df = df.drop_duplicates(subset=['Job Title', 'Company', 'Location'], keep="first", ignore_index=True)
 
-if os.path.exists("indeed_jobs.csv"):
-    legacy_df = pd.read_csv("indeed_jobs.csv")
-    jobs_to_email = df[~df['Link'].isin(legacy_df['Link'])].copy()
-    jobs_to_email.to_excel("Jobs to Email.xlsx", sheet_name="New Jobs", index=False)
+if os.path.exists("data/processed/indeed_jobs.csv"):
+    legacy_df = pd.read_csv("data/processed/indeed_jobs.csv")
+    df['Job_Combination'] = df['Job Title'] + df['Company'] + df['Location']
+    legacy_df['Job_Combination'] = legacy_df['Job Title'] + legacy_df['Company'] + legacy_df['Location']
+    jobs_to_email = df[~df['Job_Combination'].isin(legacy_df['Job_Combination'])].copy()
+    jobs_to_email.to_excel("data/processed/Jobs to Email.xlsx", sheet_name="New Jobs", index=False)
     df = pd.concat([df, legacy_df], ignore_index=True)
-    # Data clean up
-    df = df.drop_duplicates(subset='Link', keep="first", ignore_index=True)
 else:
-    df.to_excel("Jobs to Email.xlsx", sheet_name="New Jobs", index=False)
+    df.to_excel("data/processed/Jobs to Email.xlsx", sheet_name="New Jobs", index=False)
 
-df.to_csv("indeed_jobs.csv", index=False)
+# Data clean up
+df = df.drop_duplicates(subset='Link', keep="first", ignore_index=True)
+df = df.drop_duplicates(subset=['Job Title', 'Company', 'Location'], keep="first", ignore_index=True)
+for index, row in df.iterrows():
+    if isinstance(row['Link'], str) and row['Link'].count("https://www.indeed.com") > 1:
+        df.at[index, 'Link'] = row['Link'].replace("https://www.indeed.com", "", 1)
+df.to_csv("data/processed/indeed_jobs.csv", index=False)
 
 # Close browser and quit driver
 driver.close()
