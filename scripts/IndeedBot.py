@@ -11,12 +11,18 @@ SM_TX = "https://www.indeed.com/jobs?q=scrum+master&l=Katy%2C+TX&fromage=1&radiu
 BA_TX = "https://www.indeed.com/jobs?q=business+analyst&l=Katy%2C+TX&fromage=1&radius=35&from=searchOnDesktopSerp&filter=0"
 
 
-
 class IndeedBot:
     def __init__(self):
         self.job_urls = [SM_REMOTE, BA_REMOTE, SM_TX, BA_TX]
         self.driver = None
         self.df = initialize_df()
+
+        # Get the base directory (the folder)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        self.output_folder = os.path.join(base_dir, "data", "processed")
+
+        # Ensure the output folder exists
+        os.makedirs(self.output_folder, exist_ok=True)
 
     def run(self):
         self.initialize_script()
@@ -34,7 +40,7 @@ class IndeedBot:
     def job_search(self):
         for url in self.job_urls:
             self.driver.get(url)
-            self.df = pd.concat([self.df, self.build_df(self.df)], ignore_index=True)
+            self.df = pd.concat([self.df, self.build_df()], ignore_index=True)
 
     # Data Clean up
     def clean_data(self):
@@ -58,23 +64,36 @@ class IndeedBot:
     # combine exiting data with new data, clean and remove dupes
     # produce file outputs (csv, excel)
     def final_output(self):
-        if os.path.exists("../data/processed/indeed_jobs.csv"):
-            legacy_df = pd.read_csv("../data/processed/indeed_jobs.csv")
+        # Define file paths
+        csv_file_path = os.path.join(self.output_folder, "indeed_jobs.csv")
+        excel_file_path = os.path.join(self.output_folder, "Jobs to Email.xlsx")
 
+        # Check if the legacy CSV file exists
+        if os.path.exists(csv_file_path):
+            legacy_df = pd.read_csv(csv_file_path)
+
+            # Create 'Job_Combination' column for both dataframes
             self.df['Job_Combination'] = self.df['Job Title'] + self.df['Company'] + self.df['Location']
             legacy_df['Job_Combination'] = legacy_df['Job Title'] + legacy_df['Company'] + legacy_df['Location']
-            jobs_to_email = self.df[~self.df['Job_Combination'].isin(legacy_df['Job_Combination'])].copy()
-            jobs_to_email.to_excel("data/processed/Jobs to Email.xlsx", sheet_name="New Jobs", index=False)
 
+            # Get jobs that are new (not in the legacy CSV)
+            jobs_to_email = self.df[~self.df['Job_Combination'].isin(legacy_df['Job_Combination'])].copy()
+
+            # Save new jobs to Excel
+            jobs_to_email.to_excel(excel_file_path, sheet_name="New Jobs", index=False)
+
+            # Combine the new and legacy data
             self.df = pd.concat([self.df, legacy_df], ignore_index=True)
             self.clean_data()
+
         else:
-            self.df.to_excel("data/processed/Jobs to Email.xlsx", sheet_name="New Jobs", index=False)
+            # If no legacy data, just save the new jobs to Excel
+            self.df.to_excel(excel_file_path, sheet_name="New Jobs", index=False)
 
-        # Create/Update csv db
-        self.df.to_csv("data/processed/indeed_jobs.csv", index=False)
+        # Create/Update the CSV database
+        self.df.to_csv(csv_file_path, index=False)
 
-    def build_df (self, df):
+    def build_df (self):
         verify_human = self.driver.find_elements(By.XPATH, "//h1[text()='Additional Verification Required']")
 
         if len(verify_human) > 0:
@@ -100,7 +119,7 @@ class IndeedBot:
 
             # After the loop, convert rows to a DataFrame and append to the main df
             df_new = initialize_df(rows)
-            self.df = pd.concat([df, df_new], ignore_index=True)
+            self.df = pd.concat([self.df, df_new], ignore_index=True)
 
             # Find the "Next Page" button
             el = self.driver.find_elements(By.XPATH, '//a[@aria-label="Next Page"]')
