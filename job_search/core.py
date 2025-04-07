@@ -1,9 +1,10 @@
+from pandas import DataFrame
 from selenium import webdriver as wd
 from selenium.webdriver.chrome.options import Options
 import time
 import pandas as pd
 import subprocess
-import os
+
 
 
 def initialize_driver():
@@ -32,33 +33,9 @@ def tear_down(driver):
     driver.close()
     driver.quit()
 
-def data_frame_setup():
-    return pd.DataFrame(columns=['Link', 'Job Title', 'Company', 'Location'])
-
-
-
-
-
-
+def initialize_df(rows=None) -> DataFrame:
+    return pd.DataFrame(rows or [], columns=['Link', 'Job Title', 'Company', 'Location'])
 
 #------------ NEEDS SEPARATE SCRIPT FOR CLEAN UP AND SAVING RAW AND PROCESSED DATA---------------------------#
-# Data Clean up
-df['Link'] = "https://www.indeed.com" + df['Link']
 
-df = df.drop_duplicates(subset='Link', keep='first', ignore_index=True)
 
-# Data clean up
-df['Link'] = "https://www.indeed.com" + df['Link']
-df = df.drop_duplicates(subset='Link', keep="first", ignore_index=True)
-
-if os.path.exists("../data/processed/indeed_jobs.csv"):
-    legacy_df = pd.read_csv("../data/processed/indeed_jobs.csv")
-    jobs_to_email = df[~df['Link'].isin(legacy_df['Link'])].copy()
-    jobs_to_email.to_excel("Jobs to Email.xlsx", sheet_name="New Jobs", index=False)
-    df = pd.concat([df, legacy_df], ignore_index=True)
-    # Data clean up
-    df = df.drop_duplicates(subset='Link', keep="first", ignore_index=True)
-else:
-    df.to_excel("Jobs to Email.xlsx", sheet_name="New Jobs", index=False)
-
-df.to_csv("indeed_jobs.csv", index=False)
